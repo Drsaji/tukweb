@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuk Tuk Driver</title>
+  <!-- Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js"></script>
+  <!-- Firebase Auth and Database SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.6/firebase-database.js"></script>
+</head>
+<body class="bg-gray-100">
+
+  <!-- Public Section -->
+  <div id="publicPage" class="flex flex-col items-center justify-center min-h-screen p-4">
+    <h1 class="text-4xl font-bold mb-6">Tuk Tuk Driver Status</h1>
+    <div class="mb-8">
+      <img src="i\saji.jpg" alt="Tuk Tuk Driver" class="w-64 h-64 rounded-full shadow-lg mb-4">
+      <h2 class="text-2xl font-semibold">Current Status: <span id="statusDisplay" class="text-green-500">Offline</span></h2>
+    </div>
+    <button onclick="showLogin()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Admin Login</button>
+  </div>
+
+  <!-- Admin Login Form -->
+  <div id="loginPage" class="hidden flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-xs">
+      <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email</label>
+          <input id="email" type="email" placeholder="Enter your email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+          <input id="password" type="password" placeholder="Enter your password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="flex items-center justify-between">
+          <button type="button" id="loginButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="dashboardPage" class="hidden flex flex-col items-center justify-center min-h-screen bg-gray-100">
+    <h2 class="text-3xl font-bold mb-6">Admin Dashboard</h2>
+    <p class="text-lg font-semibold">Set Your Status</p>
+    <div class="mt-4 flex gap-4">
+      <button onclick="updateStatus('Online')" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Go Online</button>
+      <button onclick="updateStatus('Offline')" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Go Offline</button>
+    </div>
+    <button onclick="logout()" class="mt-8 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
+  </div>
+
+  <!-- Firebase Configuration & Auth Logic -->
+  <script type="module">
+    // Firebase Configuration
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-auth.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.6.6/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyDsBqBARTVqpr4DiDoJcK6NO61nHcnJrLQ",
+    authDomain: "tuktukweb-30d66.firebaseapp.com",
+    projectId: "tuktukweb-30d66",
+    storageBucket: "tuktukweb-30d66.firebasestorage.app",
+    messagingSenderId: "613031459972",
+    appId: "1:613031459972:web:ad610431435f3f93a856d1",
+    measurementId: "G-5PN1KRPZGF"
+  };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Display public status
+    const statusDisplay = document.getElementById("statusDisplay");
+    const statusRef = ref(db, "status");
+
+    onValue(statusRef, (snapshot) => {
+      const status = snapshot.val();
+      statusDisplay.textContent = status || "Offline";
+      statusDisplay.className = status === "Online" ? "text-green-500" : "text-gray-500";
+    });
+
+    // Authentication and Login Logic
+    const loginPage = document.getElementById("loginPage");
+    const dashboardPage = document.getElementById("dashboardPage");
+    const publicPage = document.getElementById("publicPage");
+    const loginButton = document.getElementById("loginButton");
+
+    loginButton.addEventListener("click", () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          loginPage.classList.add("hidden");
+          dashboardPage.classList.remove("hidden");
+          publicPage.classList.add("hidden");
+        })
+        .catch(error => {
+          alert("Error: " + error.message);
+        });
+    });
+
+    // Status Update Function (for Admin)
+    window.updateStatus = function(status) {
+      set(ref(db, "status"), status)
+        .then(() => alert("Status updated to " + status))
+        .catch(error => alert("Error updating status: " + error.message));
+    };
+
+    // Logout
+    window.logout = function() {
+      signOut(auth).then(() => {
+        dashboardPage.classList.add("hidden");
+        publicPage.classList.remove("hidden");
+      }).catch(error => alert("Error logging out: " + error.message));
+    };
+
+    // Show Login Form
+    window.showLogin = function() {
+      publicPage.classList.add("hidden");
+      loginPage.classList.remove("hidden");
+    };
+
+    // Redirect to Dashboard if Authenticated
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginPage.classList.add("hidden");
+        dashboardPage.classList.remove("hidden");
+        publicPage.classList.add("hidden");
+      } else {
+        loginPage.classList.add("hidden");
+        dashboardPage.classList.add("hidden");
+        publicPage.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
